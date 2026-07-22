@@ -1,0 +1,105 @@
+name: christiangeorgelucas/whois-tools
+version: 0.1.0
+language: go
+description: >-
+  Deterministic parsing of domain and IP registration records: legacy
+  WHOIS text and RDAP JSON (RFC 9083, the IETF successor protocol) into a
+  single normalized shape — registrar/registrant/admin/tech/billing
+  contacts, name servers, DNSSEC, created/updated/expiration dates, and
+  EPP (RFC 5731) status codes normalized against the ICANN status
+  vocabulary. Every node is a pure text/JSON -> struct transform: the
+  caller supplies the WHOIS response or RDAP response text, this package
+  never performs the network query/fetch itself. Wraps
+  likexian/whois-parser (Apache-2.0) for legacy WHOIS text, which
+  recognizes the free-text formats of hundreds of TLD registries; RDAP
+  JSON parsing is implemented directly against the RFC 9083 schema (RDAP
+  is already fully specified, self-describing JSON, so there is no
+  parsing algorithm to wrap the way WHOIS free text needs one). Input is
+  capped at 640 KiB and RDAP JSON nesting at 64 levels; malformed,
+  oversized, or pathologically nested input returns a structured error
+  instead of a crash.
+nodes:
+    - name: ParseWhois
+      input: ParseWhoisInput
+      output: RegistrationRecord
+      description: >-
+        Parse a raw legacy-WHOIS text response (as returned by a WHOIS
+        server on port 43, or a caller's own WHOIS client) into the
+        canonical RegistrationRecord: registrar/registrant/admin/tech/
+        billing contacts, name servers, DNSSEC flag, created/updated/
+        expiration dates, and normalized EPP status codes. Wraps
+        likexian/whois-parser (Apache-2.0). Input over 640 KiB or text
+        the library cannot make sense of returns a structured error.
+    - name: ParseRdapDomain
+      input: ParseRdapInput
+      output: RegistrationRecord
+      description: >-
+        Parse an RDAP JSON response for a domain object (RFC 9083 §5.3)
+        into the same canonical RegistrationRecord ParseWhois produces —
+        ldhName/unicodeName, status normalized against the ICANN EPP
+        vocabulary, nameservers, secureDNS.delegationSigned, registration/
+        expiration/last-changed events, the IANA registrar ID, and every
+        entity's jCard contact tagged by RDAP role. Implemented directly
+        against the RFC 9083 schema. Input over 640 KiB, JSON nested past
+        64 levels, or a response that is not a recognizable domain object
+        returns a structured error.
+    - name: ParseRdapIpNetwork
+      input: ParseRdapInput
+      output: IpRegistrationRecord
+      description: >-
+        Parse an RDAP JSON response for an "ip network" object (RFC 9083
+        §5.4) into the canonical IpRegistrationRecord: handle, start/end
+        address, CIDR blocks, IP version, allocation type, country,
+        parent handle, normalized statuses, events, and entities. The
+        IP-registration counterpart to ParseRdapDomain; legacy IP WHOIS
+        text is intentionally out of scope for structured parsing (each
+        regional registry uses a distinct free-text vocabulary, whereas
+        RDAP standardizes all five under one schema). Input over 640 KiB,
+        JSON nested past 64 levels, or a response that is not a
+        recognizable ip-network object returns a structured error.
+    - name: ParseRdapEntity
+      input: ParseRdapInput
+      output: Contact
+      description: >-
+        Parse a single RDAP "entity" object (RFC 9083 §5.1) on its own —
+        the shape an RDAP /entities search endpoint returns, or an entity
+        a caller has already pulled out of a larger response — into a
+        Contact: decodes its jCard (RFC 7095 vcardArray: fn, org, adr,
+        tel, email) plus its handle and roles. Use ParseRdapDomain or
+        ParseRdapIpNetwork instead when you have the whole containing
+        object. Input over 640 KiB, JSON nested past 64 levels, or text
+        that is not valid JSON returns a structured error.
+    - name: NormalizeEppStatus
+      input: NormalizeEppStatusInput
+      output: EppStatus
+      description: >-
+        Normalize one raw registration-status token — a bare EPP (RFC
+        5731) word, a legacy-WHOIS "Domain Status:" line, or a full RDAP
+        "https://icann.org/epp#code" URL — against the ICANN EPP status
+        vocabulary: the bare code, a human-readable description, its
+        category (transfer/renew/update/delete/hold/general), and whether
+        it is client- (registrar-) or server- (registry-) set. The same
+        lookup ParseWhois/ParseRdapDomain/ParseRdapIpNetwork use
+        internally. An unrecognized status returns an EppStatus with only
+        `raw` set, not an error.
+    - name: ExtractKeyFacts
+      input: ExtractKeyFactsInput
+      output: KeyFacts
+      description: >-
+        Flatten an already-parsed RegistrationRecord down to the facts
+        almost every caller wants: domain name, registrar name,
+        expiration date, and name servers. When an `as_of` reference date
+        is supplied, also computes days_until_expiry and is_expired —
+        deterministically from the two input dates, never from the wall
+        clock. A record with neither domain_name nor expiration_date
+        returns a structured error.
+    - name: DetectFormat
+      input: DetectFormatInput
+      output: DetectFormatResult
+      description: >-
+        Heuristically classify a text blob of unknown origin as "rdap"
+        (JSON with an RDAP marker key), "whois" (colon-delimited-field
+        text with a recognizable WHOIS marker), or "unknown" — a routing
+        helper for a flow that needs to decide whether to send text to
+        ParseWhois or a ParseRdap* node. Pure string inspection; never
+        parses the text as JSON.

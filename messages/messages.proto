@@ -1,0 +1,264 @@
+// This file defines the data contracts (messages) for your Axiom package.
+// Every node's --input and --output refers to a message defined here.
+//
+// Run `axiom create message <Name>` to scaffold a new message below.
+// Run `axiom generate` to compile these definitions into language bindings in gen/.
+//
+// DOCUMENTATION
+//   Comments written directly above a message or field declaration are extracted
+//   automatically at publish time and shown in the Axiom registry as documentation.
+//   Write your descriptions there — no separate doc files needed.
+//
+//   Leading comment  (no blank line before the declaration) → registry description ✓
+//   Detached comment (blank line before the declaration)    → ignored by registry  ✗
+//
+// This file is yours to edit. Axiom only appends new message blocks — it never
+// overwrites or removes content you have written.
+
+syntax = "proto3";
+
+package christiangeorgelucas.whois_tools;
+
+option go_package = ".;gen";
+
+// A structured, deterministic parse failure. Unset (all fields empty) on
+// success. Every output message in this package carries an `error` field
+// instead of ever panicking or returning a raw library exception.
+message Error {
+  // Stable machine-readable code. One of:
+  //   EMPTY_INPUT        — a required string field was empty.
+  //   INPUT_TOO_LARGE    — the input exceeds this node's documented byte cap.
+  //   INVALID_WHOIS      — the text could not be parsed as WHOIS output.
+  //   INVALID_RDAP_JSON  — the text is not valid JSON, or not a recognizable
+  //                        RDAP object of the kind this node expects.
+  //   INVALID_ARGUMENT   — a non-text argument is out of its valid domain
+  //                        (e.g. an unparseable date passed as `as_of`).
+  string code = 1;
+  // Human-readable detail, safe to surface to a caller.
+  string message = 2;
+}
+
+// One normalized EPP (Extensible Provisioning Protocol, RFC 5731) domain or
+// IP-network status code, per the ICANN EPP status registry
+// (icann.org/epp). RDAP encodes statuses as lowerCamelCase words (e.g.
+// "clientTransferProhibited") wrapped in an epp# URL; legacy WHOIS text
+// encodes the same vocabulary as free-standing words or "Domain Status:"
+// lines. This message is the normalized shape either source maps to.
+message EppStatus {
+  // The bare EPP status code, e.g. "clientTransferProhibited", "ok",
+  // "pendingDelete". Empty if `raw` did not match any known EPP status.
+  string code = 1;
+  // The status exactly as it appeared in the source (a bare word, a
+  // "Domain Status: x (url)" line, or an RDAP epp# URL).
+  string raw = 2;
+  // Human-readable description of what the status means, from the ICANN
+  // EPP status registry.
+  string description = 3;
+  // One of: "add-remove" (client/server prohibitions on add/remove of a
+  // status), "transfer", "renew", "update", "delete", "hold", "general".
+  // Empty if `code` is empty.
+  string category = 4;
+  // True when the status is caller/registrar-set ("client...") vs.
+  // registry-set ("server...").
+  bool is_client_status = 5;
+  // True when the status is registry- (server-) set.
+  bool is_server_status = 6;
+  Error error = 7;
+}
+
+// A registration contact — a registrar, registrant, or admin/tech/billing
+// contact, from either a legacy WHOIS text block or an RDAP "entity"
+// object's jCard (RFC 7095) vCard array.
+message Contact {
+  // Registry- or registrar-assigned identifier (RDAP entity "handle", or a
+  // WHOIS "Registry Registrant ID"-style field).
+  string id = 1;
+  string name = 2;
+  string organization = 3;
+  string street = 4;
+  string city = 5;
+  string province = 6;
+  string postal_code = 7;
+  string country = 8;
+  string phone = 9;
+  string phone_ext = 10;
+  string fax = 11;
+  string fax_ext = 12;
+  string email = 13;
+  // A registrar's WHOIS/RDAP referral URL (only populated on the registrar
+  // contact).
+  string referral_url = 14;
+  // RDAP entity roles this contact was tagged with where known, e.g.
+  // ["registrant"], ["technical"], ["registrar", "sponsor"]. Empty for
+  // WHOIS-sourced contacts (WHOIS text conveys the role positionally, via
+  // which top-level field the contact came from, not as an explicit list).
+  repeated string roles = 15;
+  Error error = 16;
+}
+
+// One RDAP "event" (RFC 9083 §4.5) — a dated action against the object,
+// e.g. {action: "registration", date: "..."} or {action: "last changed",
+// date: "..."}. Legacy WHOIS text only ever conveys the three conventional
+// dates (created/updated/expiration), which ParseWhois also mirrors here
+// for a uniform shape.
+message RegistrationEvent {
+  string action = 1;
+  // ISO 8601 timestamp, as given by the source.
+  string date = 2;
+  // The actor associated with the event, when RDAP provides one (e.g. a
+  // registrar handle). Usually empty.
+  string actor = 3;
+}
+
+// The canonical domain-registration record. Both ParseWhois (legacy WHOIS
+// text) and ParseRdapDomain (RDAP JSON, RFC 9083) produce this same shape,
+// so downstream nodes and flows can treat a domain record identically
+// regardless of which source it came from — check `source` if you need to
+// know.
+message RegistrationRecord {
+  // The domain name in the record (ASCII/punycode form if the source used
+  // one).
+  string domain_name = 1;
+  // Unicode (IDN) form of the domain name, when the source distinguishes
+  // it from the ASCII/punycode form. Empty when not applicable/available.
+  string unicode_name = 2;
+  // Raw status tokens exactly as the source expressed them (free words,
+  // "Domain Status:" lines, or RDAP epp# URLs).
+  repeated string statuses = 3;
+  // The same statuses, normalized via the same lookup NormalizeEppStatus
+  // uses. A status the lookup does not recognize still appears here with
+  // an empty `code`/`description` and `raw` set to the original text.
+  repeated EppStatus normalized_statuses = 4;
+  repeated string name_servers = 5;
+  // True if the source asserts DNSSEC is signed for this domain.
+  bool dnssec = 6;
+  // ISO 8601 date/time strings, normalized where the source format allows.
+  // Left as an empty string (never a placeholder) when the source does not
+  // report that date.
+  string created_date = 7;
+  string updated_date = 8;
+  string expiration_date = 9;
+  // The full list of dated events the source reported (RDAP sources
+  // populate this richly — transfer, last-changed, etc.; WHOIS sources
+  // populate it with at most the three conventional dates above, mirrored
+  // here as events too).
+  repeated RegistrationEvent events = 10;
+  Contact registrar = 11;
+  Contact registrant = 12;
+  Contact administrative = 13;
+  Contact technical = 14;
+  Contact billing = 15;
+  // The registrar's IANA registrar ID, when the source reports one.
+  string registrar_iana_id = 16;
+  // The WHOIS server that would be authoritative for this domain, when the
+  // source reports one (a legacy-WHOIS-only concept; always empty for
+  // RDAP-sourced records).
+  string whois_server = 17;
+  // "whois" or "rdap" — which parser produced this record.
+  string source = 18;
+  Error error = 19;
+}
+
+// The canonical IP-network registration record, from an RDAP "ip network"
+// object (RFC 9083 §5.4). Legacy IP WHOIS text is intentionally out of
+// scope for structured parsing (its formats vary per regional registry —
+// ARIN/RIPE/APNIC/LACNIC/AfriNIC each use a distinct field vocabulary —
+// whereas RDAP standardizes all five under one schema).
+message IpRegistrationRecord {
+  // Registry-assigned handle for the network object.
+  string handle = 1;
+  // A short descriptive name for the network, when the source reports one.
+  string name = 2;
+  string start_address = 3;
+  string end_address = 4;
+  // Every CIDR block the source expresses for this network (RDAP's
+  // "cidr0_cidrs" extension), e.g. ["192.0.2.0/24"]. Empty if the source
+  // did not include CIDR notation (start/end address are always present
+  // when the record parsed successfully).
+  repeated string cidrs = 5;
+  // 4 or 6. 0 if undetermined.
+  int32 version = 6;
+  // Registry allocation/assignment type, e.g. "ALLOCATED", "ASSIGNED",
+  // "DIRECT ALLOCATION".
+  string type = 7;
+  string country = 8;
+  // Handle of the parent network object in the registry, when reported.
+  string parent_handle = 9;
+  repeated string statuses = 10;
+  repeated EppStatus normalized_statuses = 11;
+  repeated RegistrationEvent events = 12;
+  // Every entity (contact) attached to the network object, each tagged
+  // with its RDAP roles (see Contact.roles) — a network typically has an
+  // "administrative", "technical", and/or "registrant" entity.
+  repeated Contact entities = 13;
+  Error error = 14;
+}
+
+// Input for ParseWhois: a raw legacy-WHOIS text response, exactly as
+// returned by a WHOIS server (port 43) or a caller's own WHOIS client —
+// this node never performs the network query itself.
+message ParseWhoisInput {
+  string raw_whois = 1;
+}
+
+// Input shared by every RDAP-parsing node: a raw RDAP JSON response body,
+// exactly as returned by a registry/registrar RDAP HTTP endpoint — this
+// node never performs the network fetch itself. Capped at 640 KiB (the
+// deployed platform's safe payload ceiling); an oversized `rdap_json`
+// returns a structured INPUT_TOO_LARGE error rather than being truncated.
+message ParseRdapInput {
+  string rdap_json = 1;
+}
+
+// Input for NormalizeEppStatus: one raw status token, in any of the forms
+// a source expresses it — a bare EPP word ("clientTransferProhibited"), a
+// WHOIS "Domain Status:" line, or a full RDAP epp# URL
+// ("https://icann.org/epp#clientTransferProhibited").
+message NormalizeEppStatusInput {
+  string status = 1;
+}
+
+// Input for ExtractKeyFacts: an already-parsed RegistrationRecord (the
+// output of ParseWhois or ParseRdapDomain) plus an optional caller-supplied
+// "as of" reference date used to compute `days_until_expiry`/`is_expired`.
+// Deterministic by construction: this node never reads the wall clock —
+// omit `as_of` to get every field except the two that need "now".
+message ExtractKeyFactsInput {
+  RegistrationRecord record = 1;
+  // ISO 8601 date (e.g. "2026-07-22") or date-time the caller considers
+  // "now". Leave empty to skip `days_until_expiry`/`is_expired`.
+  string as_of = 2;
+}
+
+// The handful of facts almost every caller actually wants out of a
+// registration record, flattened for easy access without walking the full
+// RegistrationRecord tree.
+message KeyFacts {
+  string domain_name = 1;
+  string registrar_name = 2;
+  string expiration_date = 3;
+  repeated string name_servers = 4;
+  // Populated only when ExtractKeyFactsInput.as_of was non-empty.
+  int32 days_until_expiry = 5;
+  bool is_expired = 6;
+  // True only when both ExtractKeyFactsInput.as_of was supplied AND
+  // expiration_date parsed — i.e. whether days_until_expiry/is_expired are
+  // meaningful.
+  bool has_expiry_computation = 7;
+  Error error = 8;
+}
+
+// Input for DetectFormat: a text blob of unknown origin — the caller is
+// trying to decide whether to route it to ParseWhois or a ParseRdap* node.
+message DetectFormatInput {
+  string text = 1;
+}
+
+// Output of DetectFormat.
+message DetectFormatResult {
+  // "whois", "rdap", or "unknown".
+  string format = 1;
+  // 0.0-1.0 heuristic confidence in `format`.
+  double confidence = 2;
+  Error error = 3;
+}

@@ -203,9 +203,10 @@ message ParseWhoisInput {
 
 // Input shared by every RDAP-parsing node: a raw RDAP JSON response body,
 // exactly as returned by a registry/registrar RDAP HTTP endpoint — this
-// node never performs the network fetch itself. Capped at 640 KiB (the
-// deployed platform's safe payload ceiling); an oversized `rdap_json`
-// returns a structured INPUT_TOO_LARGE error rather than being truncated.
+// node never performs the network fetch itself. Capped at 10 MiB (well
+// under the deployed platform's 16 MiB invoke payload limit); an oversized
+// `rdap_json` returns a structured INPUT_TOO_LARGE error rather than being
+// truncated.
 message ParseRdapInput {
   string rdap_json = 1;
 }

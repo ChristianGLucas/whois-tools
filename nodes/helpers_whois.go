@@ -9,10 +9,11 @@ import (
 )
 
 // maxInputBytes is the safe payload ceiling for this package's text/JSON
-// inputs. The deployed Axiom invocation ingress caps request bodies at
-// ~1 MiB; we reject well under that so the error is ours (structured) and
-// not a bare gateway 413.
-const maxInputBytes = 640 * 1024
+// inputs. The deployed Axiom platform accepts invoke payloads up to 16 MiB;
+// we cap well under that so the error is ours (structured) and not a bare
+// gateway 413, while still comfortably covering real-world WHOIS/RDAP
+// responses (which are plain text/JSON, never base64-inflated).
+const maxInputBytes = 10 * 1024 * 1024
 
 func errTooLarge(n int) *gen.Error {
 	return &gen.Error{

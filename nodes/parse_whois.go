@@ -14,7 +14,7 @@ import (
 // name servers, DNSSEC flag, created/updated/expiration dates, and
 // normalized EPP status codes. Wraps likexian/whois-parser (Apache-2.0),
 // which recognizes the free-text formats of hundreds of TLD registries.
-// Input over 640 KiB or text the library cannot make sense of returns a
+// Input over 10 MiB or text the library cannot make sense of returns a
 // structured error instead of a crash.
 func ParseWhois(ctx context.Context, ax axiom.Context, input *gen.ParseWhoisInput) (*gen.RegistrationRecord, error) {
 	if input.GetRawWhois() == "" {

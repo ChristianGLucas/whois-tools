@@ -204,7 +204,7 @@ func TestParseRdapDomain_TooLarge(t *testing.T) {
 	ctx := context.Background()
 	ax := newTestContext(t)
 
-	huge := `{"ldhName":"` + strings.Repeat("a", 700*1024) + `"}`
+	huge := `{"ldhName":"` + strings.Repeat("a", 11*1024*1024) + `"}`
 	got, err := nodes.ParseRdapDomain(ctx, ax, &gen.ParseRdapInput{RdapJson: huge})
 	if err != nil {
 		t.Fatalf("unexpected go error: %v", err)

@@ -77,7 +77,7 @@ func TestDetectFormat_TooLarge(t *testing.T) {
 	ctx := context.Background()
 	ax := newTestContext(t)
 
-	huge := strings.Repeat("a", 700*1024)
+	huge := strings.Repeat("a", 11*1024*1024)
 	got, err := nodes.DetectFormat(ctx, ax, &gen.DetectFormatInput{Text: huge})
 	if err != nil {
 		t.Fatalf("unexpected go error: %v", err)

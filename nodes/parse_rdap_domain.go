@@ -19,7 +19,7 @@ import (
 // directly against the RFC 9083 JSON schema rather than a third-party
 // library — RDAP is already a fully specified, self-describing JSON
 // format, so there is no parsing algorithm to wrap the way legacy WHOIS
-// free text needs one. Input over 640 KiB, JSON nested past 64 levels, or
+// free text needs one. Input over 10 MiB, JSON nested past 64 levels, or
 // text that is not valid JSON / not a recognizable domain object returns a
 // structured error instead of a crash.
 func ParseRdapDomain(ctx context.Context, ax axiom.Context, input *gen.ParseRdapInput) (*gen.RegistrationRecord, error) {

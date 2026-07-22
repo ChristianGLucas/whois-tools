@@ -140,13 +140,13 @@ func TestParseWhois_Malformed(t *testing.T) {
 	}
 }
 
-// TestParseWhois_TooLarge proves the 640 KiB cap is enforced rather than
-// handed to the parser (and, downstream, the deployed ~1 MiB gateway).
+// TestParseWhois_TooLarge proves the 10 MiB cap is enforced rather than
+// handed to the parser (and, downstream, the deployed 16 MiB invoke limit).
 func TestParseWhois_TooLarge(t *testing.T) {
 	ctx := context.Background()
 	ax := newTestContext(t)
 
-	huge := strings.Repeat("Domain Name: example.com\n", 40000) // well over 640 KiB
+	huge := strings.Repeat("Domain Name: example.com\n", 450000) // well over 10 MiB
 	got, err := nodes.ParseWhois(ctx, ax, &gen.ParseWhoisInput{RawWhois: huge})
 	if err != nil {
 		t.Fatalf("unexpected go error: %v", err)

@@ -16,7 +16,7 @@ import (
 // text with a recognizable WHOIS marker like "Domain Name:"/"registrar:"),
 // or "unknown". Pure string inspection — never parses the text as JSON, so
 // it cannot be driven into the deep-recursion cost the RDAP parsers guard
-// against, and it runs in constant-ish time bounded by the same 640 KiB
+// against, and it runs in constant-ish time bounded by the same 10 MiB
 // input cap every node in this package uses.
 func DetectFormat(ctx context.Context, ax axiom.Context, input *gen.DetectFormatInput) (*gen.DetectFormatResult, error) {
 	text := input.GetText()

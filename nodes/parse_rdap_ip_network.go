@@ -16,8 +16,8 @@ import (
 // ParseRdapDomain — legacy IP WHOIS text is intentionally out of scope for
 // structured parsing (ARIN/RIPE/APNIC/LACNIC/AfriNIC each use a distinct
 // free-text vocabulary; RDAP standardizes all five under this one schema).
-// Input over 10 MiB, JSON nested past 64 levels, or text that is not a
-// recognizable ip-network object returns a structured error.
+// Text that is not a recognizable ip-network object returns a structured
+// error.
 func ParseRdapIpNetwork(ctx context.Context, ax axiom.Context, input *gen.ParseRdapInput) (*gen.IpRegistrationRecord, error) {
 	if errOut := checkRdapInput(input.GetRdapJson()); errOut != nil {
 		return &gen.IpRegistrationRecord{Error: errOut}, nil

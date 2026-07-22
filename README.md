@@ -43,13 +43,15 @@ rather than a third-party library: RDAP is already fully specified,
 self-describing JSON, so there is no parsing algorithm to wrap the way
 legacy WHOIS free text needs one.
 
-## Bounds
+## Error contract
 
-Every node caps input at 640 KiB (well under the Axiom deployed ingress's
-~1 MiB ceiling) and RDAP JSON at 64 levels of nesting, checked before any
-JSON is unmarshaled. Malformed, oversized, or pathologically nested input
-returns a structured error (`{ error: { code, message } }`) instead of a
-crash.
+Every node returns a structured error (`{ error: { code, message } }`)
+instead of ever panicking or crashing: malformed WHOIS text, JSON that
+isn't valid or isn't a recognizable RDAP object of the kind the node
+expects, or a required field left empty all come back as a clean
+domain-level error rather than a raw exception. Payload-size and
+resource limits are the deployed Axiom platform's concern, not this
+package's.
 
 ## License
 

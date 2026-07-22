@@ -9,70 +9,13 @@ import (
 	gen "christiangeorgelucas/whois-tools/gen"
 )
 
-// maxJSONNestingDepth bounds how deeply nested caller-supplied RDAP JSON
-// may be before we refuse to decode it. RDAP objects never legitimately
-// nest more than ~10 levels (domain -> entities -> entities -> vcardArray
-// -> property -> value); a bound of 64 is generous headroom. This check
-// runs as a cheap linear byte scan BEFORE any json.Unmarshal, because
-// Go's decoder recurses once per nesting level and unbounded nesting (a
-// payload of nothing but "[[[[...]]]]") can exhaust the goroutine stack —
-// a fatal, unrecoverable crash that a deferred recover() cannot catch, so
-// it must be prevented rather than caught.
-const maxJSONNestingDepth = 64
-
-// jsonNestingDepth returns the maximum bracket/brace nesting depth of a
-// JSON text, ignoring bytes inside string literals, without ever building
-// a parsed representation. Bails out early (returning a depth already over
-// maxJSONNestingDepth) rather than scanning the whole input once the limit
-// is exceeded.
-func jsonNestingDepth(data []byte) int {
-	depth, max := 0, 0
-	inString := false
-	escaped := false
-	for _, b := range data {
-		if inString {
-			switch {
-			case escaped:
-				escaped = false
-			case b == '\\':
-				escaped = true
-			case b == '"':
-				inString = false
-			}
-			continue
-		}
-		switch b {
-		case '"':
-			inString = true
-		case '{', '[':
-			depth++
-			if depth > max {
-				max = depth
-			}
-			if max > maxJSONNestingDepth {
-				return max
-			}
-		case '}', ']':
-			depth--
-		}
-	}
-	return max
-}
-
-// checkRdapInput applies the shared size and nesting-depth bounds every
-// RDAP-parsing node enforces before it does any real work.
+// checkRdapInput applies the one shared precondition every RDAP-parsing
+// node enforces before it does any real work: the input must be non-empty.
+// Malformed or nonsensical JSON is a domain error surfaced by the decoder
+// itself (see parseRdapDomainJSON etc.), not checked here.
 func checkRdapInput(raw string) *gen.Error {
 	if raw == "" {
 		return errEmptyInput("rdap_json")
-	}
-	if len(raw) > maxInputBytes {
-		return errTooLarge(len(raw))
-	}
-	if jsonNestingDepth([]byte(raw)) > maxJSONNestingDepth {
-		return &gen.Error{
-			Code:    "INVALID_RDAP_JSON",
-			Message: fmt.Sprintf("input JSON nests deeper than the %d level cap this node accepts", maxJSONNestingDepth),
-		}
 	}
 	return nil
 }

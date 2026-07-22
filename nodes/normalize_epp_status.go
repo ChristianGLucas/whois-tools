@@ -2,7 +2,6 @@ package nodes
 
 import (
 	"context"
-	"fmt"
 
 	"christiangeorgelucas/whois-tools/axiom"
 	gen "christiangeorgelucas/whois-tools/gen"
@@ -22,16 +21,6 @@ import (
 func NormalizeEppStatus(ctx context.Context, ax axiom.Context, input *gen.NormalizeEppStatusInput) (*gen.EppStatus, error) {
 	if input.GetStatus() == "" {
 		return &gen.EppStatus{}, nil
-	}
-	// A real status token is at most a short URL; cap far below the
-	// package-wide 10 MiB ceiling so a pathological input can't drive
-	// wasted regex work.
-	const maxStatusBytes = 4096
-	if len(input.GetStatus()) > maxStatusBytes {
-		return &gen.EppStatus{Error: &gen.Error{
-			Code:    "INPUT_TOO_LARGE",
-			Message: fmt.Sprintf("status is %d bytes, which exceeds this node's %d byte cap", len(input.GetStatus()), maxStatusBytes),
-		}}, nil
 	}
 	return normalizeEppStatusText(input.GetStatus()), nil
 }

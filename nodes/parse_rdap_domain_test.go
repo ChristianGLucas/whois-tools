@@ -181,11 +181,12 @@ func TestParseRdapDomain_UnrecognizedShape(t *testing.T) {
 	}
 }
 
-// TestParseRdapDomain_DeeplyNested is the deep-recursion regression test:
-// a payload built purely from bracket nesting must be rejected quickly by
-// the byte-scan depth guard, never handed to json.Unmarshal (which would
-// recurse once per level and risk a fatal, unrecoverable stack overflow on
-// sufficiently adversarial input).
+// TestParseRdapDomain_DeeplyNested proves a payload built purely from
+// bracket nesting is a domain error (not a recognizable RDAP domain
+// object) rather than a silent success or a crash. Go's own JSON decoder
+// already bounds nesting depth (encoding/json's internal scanner limit),
+// so this is purely a decode/shape-mismatch error path, not a guard this
+// package needs to implement itself.
 func TestParseRdapDomain_DeeplyNested(t *testing.T) {
 	ctx := context.Background()
 	ax := newTestContext(t)
@@ -196,20 +197,6 @@ func TestParseRdapDomain_DeeplyNested(t *testing.T) {
 		t.Fatalf("unexpected go error: %v", err)
 	}
 	if got.GetError() == nil || got.GetError().GetCode() != "INVALID_RDAP_JSON" {
-		t.Fatalf("Error = %+v, want INVALID_RDAP_JSON (nesting cap)", got.GetError())
-	}
-}
-
-func TestParseRdapDomain_TooLarge(t *testing.T) {
-	ctx := context.Background()
-	ax := newTestContext(t)
-
-	huge := `{"ldhName":"` + strings.Repeat("a", 11*1024*1024) + `"}`
-	got, err := nodes.ParseRdapDomain(ctx, ax, &gen.ParseRdapInput{RdapJson: huge})
-	if err != nil {
-		t.Fatalf("unexpected go error: %v", err)
-	}
-	if got.GetError() == nil || got.GetError().GetCode() != "INPUT_TOO_LARGE" {
-		t.Fatalf("Error = %+v, want INPUT_TOO_LARGE", got.GetError())
+		t.Fatalf("Error = %+v, want INVALID_RDAP_JSON", got.GetError())
 	}
 }

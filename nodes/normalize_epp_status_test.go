@@ -2,7 +2,6 @@ package nodes_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	gen "christiangeorgelucas/whois-tools/gen"
@@ -78,17 +77,5 @@ func TestNormalizeEppStatus_EmptyInput(t *testing.T) {
 	}
 	if got.GetCode() != "" || got.GetRaw() != "" {
 		t.Errorf("expected zero-value EppStatus, got %+v", got)
-	}
-}
-
-func TestNormalizeEppStatus_TooLarge(t *testing.T) {
-	ctx := context.Background()
-	ax := newTestContext(t)
-	got, err := nodes.NormalizeEppStatus(ctx, ax, &gen.NormalizeEppStatusInput{Status: strings.Repeat("x", 5000)})
-	if err != nil {
-		t.Fatalf("unexpected go error: %v", err)
-	}
-	if got.GetError() == nil || got.GetError().GetCode() != "INPUT_TOO_LARGE" {
-		t.Fatalf("Error = %+v, want INPUT_TOO_LARGE", got.GetError())
 	}
 }

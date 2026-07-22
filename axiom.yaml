@@ -1,5 +1,5 @@
 name: christiangeorgelucas/whois-tools
-version: 0.1.1
+version: 0.1.2
 language: go
 description: >-
   Deterministic parsing of domain and IP registration records: legacy
@@ -14,10 +14,8 @@ description: >-
   recognizes the free-text formats of hundreds of TLD registries; RDAP
   JSON parsing is implemented directly against the RFC 9083 schema (RDAP
   is already fully specified, self-describing JSON, so there is no
-  parsing algorithm to wrap the way WHOIS free text needs one). Input is
-  capped at 10 MiB and RDAP JSON nesting at 64 levels; malformed,
-  oversized, or pathologically nested input returns a structured error
-  instead of a crash.
+  parsing algorithm to wrap the way WHOIS free text needs one). Malformed
+  input returns a structured error instead of a crash.
 nodes:
     - name: ParseWhois
       input: ParseWhoisInput
@@ -28,8 +26,8 @@ nodes:
         canonical RegistrationRecord: registrar/registrant/admin/tech/
         billing contacts, name servers, DNSSEC flag, created/updated/
         expiration dates, and normalized EPP status codes. Wraps
-        likexian/whois-parser (Apache-2.0). Input over 10 MiB or text
-        the library cannot make sense of returns a structured error.
+        likexian/whois-parser (Apache-2.0). Text the library cannot make
+        sense of returns a structured error.
     - name: ParseRdapDomain
       input: ParseRdapInput
       output: RegistrationRecord
@@ -40,9 +38,8 @@ nodes:
         vocabulary, nameservers, secureDNS.delegationSigned, registration/
         expiration/last-changed events, the IANA registrar ID, and every
         entity's jCard contact tagged by RDAP role. Implemented directly
-        against the RFC 9083 schema. Input over 10 MiB, JSON nested past
-        64 levels, or a response that is not a recognizable domain object
-        returns a structured error.
+        against the RFC 9083 schema. A response that is not a recognizable
+        domain object returns a structured error.
     - name: ParseRdapIpNetwork
       input: ParseRdapInput
       output: IpRegistrationRecord
@@ -54,9 +51,8 @@ nodes:
         IP-registration counterpart to ParseRdapDomain; legacy IP WHOIS
         text is intentionally out of scope for structured parsing (each
         regional registry uses a distinct free-text vocabulary, whereas
-        RDAP standardizes all five under one schema). Input over 10 MiB,
-        JSON nested past 64 levels, or a response that is not a
-        recognizable ip-network object returns a structured error.
+        RDAP standardizes all five under one schema). A response that is
+        not a recognizable ip-network object returns a structured error.
     - name: ParseRdapEntity
       input: ParseRdapInput
       output: Contact
@@ -67,8 +63,7 @@ nodes:
         Contact: decodes its jCard (RFC 7095 vcardArray: fn, org, adr,
         tel, email) plus its handle and roles. Use ParseRdapDomain or
         ParseRdapIpNetwork instead when you have the whole containing
-        object. Input over 10 MiB, JSON nested past 64 levels, or text
-        that is not valid JSON returns a structured error.
+        object. Text that is not valid JSON returns a structured error.
     - name: NormalizeEppStatus
       input: NormalizeEppStatusInput
       output: EppStatus

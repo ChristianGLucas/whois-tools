@@ -27,7 +27,6 @@ option go_package = ".;gen";
 message Error {
   // Stable machine-readable code. One of:
   //   EMPTY_INPUT        — a required string field was empty.
-  //   INPUT_TOO_LARGE    — the input exceeds this node's documented byte cap.
   //   INVALID_WHOIS      — the text could not be parsed as WHOIS output.
   //   INVALID_RDAP_JSON  — the text is not valid JSON, or not a recognizable
   //                        RDAP object of the kind this node expects.
@@ -203,10 +202,7 @@ message ParseWhoisInput {
 
 // Input shared by every RDAP-parsing node: a raw RDAP JSON response body,
 // exactly as returned by a registry/registrar RDAP HTTP endpoint — this
-// node never performs the network fetch itself. Capped at 10 MiB (well
-// under the deployed platform's 16 MiB invoke payload limit); an oversized
-// `rdap_json` returns a structured INPUT_TOO_LARGE error rather than being
-// truncated.
+// node never performs the network fetch itself.
 message ParseRdapInput {
   string rdap_json = 1;
 }

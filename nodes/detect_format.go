@@ -14,27 +14,15 @@ import (
 // starting with '{' or '[' that contains an RDAP marker key like
 // "objectClassName"/"rdapConformance"), "whois" (colon-delimited-field
 // text with a recognizable WHOIS marker like "Domain Name:"/"registrar:"),
-// or "unknown". Pure string inspection — never parses the text as JSON, so
-// it cannot be driven into the deep-recursion cost the RDAP parsers guard
-// against, and it runs in constant-ish time bounded by the same 10 MiB
-// input cap every node in this package uses.
+// or "unknown". Pure string inspection — never parses the text as JSON.
 func DetectFormat(ctx context.Context, ax axiom.Context, input *gen.DetectFormatInput) (*gen.DetectFormatResult, error) {
 	text := input.GetText()
 	if text == "" {
 		return &gen.DetectFormatResult{Error: errEmptyInput("text")}, nil
 	}
-	if len(text) > maxInputBytes {
-		return &gen.DetectFormatResult{Error: errTooLarge(len(text))}, nil
-	}
 
 	trimmed := strings.TrimSpace(text)
-	// Only look at a bounded prefix — enough to find the markers we care
-	// about without scanning a large payload multiple times.
-	head := trimmed
-	if len(head) > 8192 {
-		head = head[:8192]
-	}
-	lowerHead := strings.ToLower(head)
+	lowerHead := strings.ToLower(trimmed)
 
 	looksLikeJSON := len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[')
 	hasRdapMarker := strings.Contains(lowerHead, "objectclassname") ||
@@ -65,7 +53,7 @@ func DetectFormat(ctx context.Context, ax axiom.Context, input *gen.DetectFormat
 	// Fall back to a loose heuristic: WHOIS text is dominated by
 	// "Label: value" lines; if most non-blank lines match that shape,
 	// call it WHOIS at low confidence.
-	lines := strings.Split(head, "\n")
+	lines := strings.Split(trimmed, "\n")
 	nonBlank, colonLines := 0, 0
 	for _, l := range lines {
 		l = strings.TrimSpace(l)

@@ -2,7 +2,6 @@ package nodes_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	gen "christiangeorgelucas/whois-tools/gen"
@@ -70,19 +69,5 @@ func TestDetectFormat_EmptyInput(t *testing.T) {
 	}
 	if got.GetError() == nil || got.GetError().GetCode() != "EMPTY_INPUT" {
 		t.Fatalf("Error = %+v, want EMPTY_INPUT", got.GetError())
-	}
-}
-
-func TestDetectFormat_TooLarge(t *testing.T) {
-	ctx := context.Background()
-	ax := newTestContext(t)
-
-	huge := strings.Repeat("a", 11*1024*1024)
-	got, err := nodes.DetectFormat(ctx, ax, &gen.DetectFormatInput{Text: huge})
-	if err != nil {
-		t.Fatalf("unexpected go error: %v", err)
-	}
-	if got.GetError() == nil || got.GetError().GetCode() != "INPUT_TOO_LARGE" {
-		t.Fatalf("Error = %+v, want INPUT_TOO_LARGE", got.GetError())
 	}
 }

@@ -119,6 +119,6 @@ func TestParseRdapEntity_DeeplyNested(t *testing.T) {
 		t.Fatalf("unexpected go error: %v", err)
 	}
 	if got.GetError() == nil || got.GetError().GetCode() != "INVALID_RDAP_JSON" {
-		t.Fatalf("Error = %+v, want INVALID_RDAP_JSON (nesting cap)", got.GetError())
+		t.Fatalf("Error = %+v, want INVALID_RDAP_JSON", got.GetError())
 	}
 }

@@ -8,20 +8,6 @@ import (
 	gen "christiangeorgelucas/whois-tools/gen"
 )
 
-// maxInputBytes is the safe payload ceiling for this package's text/JSON
-// inputs. The deployed Axiom platform accepts invoke payloads up to 16 MiB;
-// we cap well under that so the error is ours (structured) and not a bare
-// gateway 413, while still comfortably covering real-world WHOIS/RDAP
-// responses (which are plain text/JSON, never base64-inflated).
-const maxInputBytes = 10 * 1024 * 1024
-
-func errTooLarge(n int) *gen.Error {
-	return &gen.Error{
-		Code:    "INPUT_TOO_LARGE",
-		Message: fmt.Sprintf("input is %d bytes, which exceeds this node's %d byte cap", n, maxInputBytes),
-	}
-}
-
 func errEmptyInput(field string) *gen.Error {
 	return &gen.Error{Code: "EMPTY_INPUT", Message: fmt.Sprintf("%s must not be empty", field)}
 }

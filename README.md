@@ -4,7 +4,7 @@ Composable Axiom nodes for deterministic parsing of domain and IP
 registration records: legacy WHOIS text and RDAP JSON (RFC 9083, the IETF
 successor protocol) into a single normalized shape.
 
-Built for the [Axiom](https://axiom.dev) marketplace, handle
+Built for the [Axiom](https://axiomide.com) marketplace, handle
 `christiangeorgelucas`.
 
 ## What it does
